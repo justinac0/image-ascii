@@ -50,36 +50,71 @@ def get_image_info(filePath: str) -> list[float]:
 
     return width, height, data
 
-def image_to_ascii_string(brightnessList, info, width, height):
+def image_to_ascii_array(brightnessList: list[int], info, width: int, height: int) -> list[chr]:
     image_width, image_height, data = info
 
-    imageString = []
+    array = []
     for y in range(height):
         for x in range(width):
             brightness = sample_pixel(data, image_width, image_height, width, height, x, y)
-            imageString.append(brightness_to_ascii(brightnessList, brightness))
+            array.append(brightness_to_ascii(brightnessList, brightness))
 
-        imageString.append('\n')
+    return array
 
-    return "".join(imageString)
+def ascii_array_add_frame(array: list[chr], width: int, height: int) -> list[chr]:
+    framed: list[chr] = []
+    
+    borderSize = 1
+    doubleBorderSize = borderSize*2
+
+    for y in range(0, height + doubleBorderSize):
+        for x in range(0, width + doubleBorderSize):
+            if x < borderSize or x > (width - 1 + borderSize) or y == (height - 1) + doubleBorderSize or y < borderSize:
+                framed.append('█')
+                continue
+
+            idx = x - borderSize + (y - borderSize) * width
+            framed.append(array[idx])
+
+    return framed
+
+def print_ascii_array(array: list[chr], width: int, includeFrame: bool):
+    borderSize = 1
+    sqrBorderSize = borderSize*2
+    for i in range(0, len(array)):
+        framedWidth = width
+        if includeFrame:
+            framedWidth = framedWidth + sqrBorderSize
+
+        if i % framedWidth == 0 and i != 0:
+            print()
+
+        print(array[i], end='')
+
+    print(f'\n{len(array)} characters')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', nargs='+', type=str, help='')
-    parser.add_argument('target_width', nargs='+', type=int, help='')
-    parser.add_argument('target_height', nargs='+', type=int, help='')
+    parser.add_argument('path', nargs='+', type=str, help='path to image')
+    parser.add_argument('target_width', nargs='+', type=int, help='target ascii image width')
+    parser.add_argument('target_height', nargs='+', type=int, help='target ascii image height')
+    parser.add_argument('include_frame', nargs='+', type=int, help='1 (yes), 0 (no)')
 
     args = parser.parse_args()
 
     ascii: chr = [
-        ' ',
+        # ' ',
         '.',
         '-',
         '+',
-        '#',
+        '#'
     ]
 
     info = get_image_info(args.path[0])
     width, height, data = info
+    array: list[chr] = image_to_ascii_array(ascii, info, args.target_width[0], args.target_height[0])
 
-    print(image_to_ascii_string(ascii, info, args.target_width[0], args.target_height[0]))
+    if args.include_frame[0] == 1:
+        array = ascii_array_add_frame(array, args.target_width[0], args.target_height[0])
+
+    print_ascii_array(array, args.target_width[0], args.include_frame[0])
